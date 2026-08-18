@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "valenceagency-8d4fd"
+  },
+  "targets": {
+    "valenceagency-8d4fd": {
+      "hosting": {
+        "app": [
+          "valenceagency"
+        ]
+      }
+    }
+  }
+}

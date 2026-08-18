@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+/* ── Акцентный цвет ─────────────────────────────────────────────
+   Вариант по умолчанию — «сигнал». Переключается data-атрибутом
+   (временный AccentSwitcher). После выбора зафиксировать здесь. */
+:root {
+  --accent: #ff4d00;
+  color-scheme: dark;
+}
+:root[data-accent="acid"] {
+  --accent: #d7ff3e;
+}
+:root[data-accent="violet"] {
+  --accent: #7c5cff;
+}
+
+@theme inline {
+  --color-bg: #0a0a0b;
+  --color-bg2: #131316;
+  --color-fg: #f4f4f2;
+  --color-muted: #8b8b93;
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-accent: var(--accent);
+
+  --font-display: var(--font-unbounded);
+  --font-sans: var(--font-manrope);
+  --font-mono: var(--font-jb);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html {
+  background: #0a0a0b;
+}
+
+body {
+  @apply bg-bg font-sans text-fg antialiased;
+  overflow-x: clip;
+}
+
+::selection {
+  background: var(--accent);
+  color: #0a0a0b;
+}
+
+/* ── Noise-текстура поверх всего ───────────────────────────── */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.045;
+}
+
+/* ── Кастомный курсор: скрываем системный только на мыши ───── */
+@media (pointer: fine) {
+  html.has-cursor,
+  html.has-cursor * {
+    cursor: none !important;
+  }
+}
+
+/* ── Скролл-индикатор в hero ───────────────────────────────── */
+@keyframes scroll-hint {
+  0% {
+    transform: translateY(-100%);
+  }
+  65%,
+  100% {
+    transform: translateY(200%);
+  }
+}
+.scroll-hint-bar {
+  animation: scroll-hint 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-hint-bar {
+    animation: none;
+  }
+}
+
+/* ── Бегущая строка ────────────────────────────────────────── */
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  animation: marquee 30s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
+/* Контурный текст (для marquee и плейсхолдеров кейсов) */
+.text-outline {
+  -webkit-text-stroke: 1px rgba(244, 244, 242, 0.28);
+  color: transparent;
+}
+
+/* ── Lenis ─────────────────────────────────────────────────── */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}

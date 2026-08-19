@@ -130,7 +130,7 @@ export const INITIAL_DATA: DbSchema = {
       year: '2026',
       result: 'прокат ретро-авто ЗАЗ-965',
       url: 'https://zazretro.web.app/',
-      image: '/cases-retro-zaz.png',
+      image: '/cases/retro-zaz-desktop.png',
       createdAt: '2026-07-15T10:00:00.000Z',
     },
     {
@@ -140,7 +140,7 @@ export const INITIAL_DATA: DbSchema = {
       year: '2026',
       result: 'быстрая доставка в Грузии',
       url: 'https://mestidelivery.com/',
-      image: '/cases-mesti-delivery.png',
+      image: '/cases/mesti-desktop.png',
       createdAt: '2026-07-30T10:00:00.000Z',
     },
     {

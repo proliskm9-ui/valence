@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Unbounded, Manrope, JetBrains_Mono } from "next/font/google";
+import { Unbounded, Manrope, JetBrains_Mono, Outfit, Inter } from "next/font/google";
 import Script from "next/script";
 import { SITE } from "@/lib/site";
 import "./globals.css";
@@ -19,6 +19,20 @@ const manrope = Manrope({
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jb",
   subsets: ["latin", "cyrillic"],
+  display: "swap",
+});
+
+const outfit = Outfit({
+  variable: "--font-outfit",
+  subsets: ["latin"],
+  weight: ["400", "700", "800", "900"],
+  display: "swap",
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin", "cyrillic"],
+  weight: ["400", "700", "800", "900"],
   display: "swap",
 });
 
@@ -48,7 +62,7 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${unbounded.variable} ${manrope.variable} ${jetbrainsMono.variable}`}
+      className={`${unbounded.variable} ${manrope.variable} ${jetbrainsMono.variable} ${outfit.variable} ${inter.variable}`}
     >
       <head>
         <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />

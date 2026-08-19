@@ -4,7 +4,6 @@ import MotionSetup from '@/components/providers/MotionSetup';
 import SmoothScroll from '@/components/providers/SmoothScroll';
 import Preloader from '@/components/ui/Preloader';
 import Cursor from '@/components/ui/Cursor';
-import AccentSwitcher from '@/components/ui/AccentSwitcher';
 import CookieBanner from '@/components/ui/CookieBanner';
 import Header from '@/components/layout/Header';
 
@@ -19,8 +18,6 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             <Header />
             <main>{children}</main>
             <CookieBanner />
-            {/* ВРЕМЕННО: выбор акцентного цвета */}
-            <AccentSwitcher />
           </SmoothScroll>
         </LoadProvider>
       </MotionSetup>

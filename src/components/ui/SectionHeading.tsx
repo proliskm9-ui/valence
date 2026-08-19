@@ -12,12 +12,33 @@ export default function SectionHeading({
   label,
   title,
   className = '',
+  pinned = false,
+  compact = false,
 }: {
   index: string;
   label: string;
   title: string;
   className?: string;
+  /** В sticky-секциях без viewport-анимации — сразу виден целиком */
+  pinned?: boolean;
+  /** Компактный заголовок внутри pin-секции (кейсы) */
+  compact?: boolean;
 }) {
+  const titleClass = compact
+    ? 'mt-2 font-display text-[clamp(1.6rem,7vw,3.25rem)] font-extrabold leading-[1.05] tracking-tight md:mt-4'
+    : 'mt-4 font-display text-[clamp(2rem,6vw,5.5rem)] font-extrabold leading-[1.05] tracking-tight md:mt-6';
+
+  if (pinned) {
+    return (
+      <div className={className}>
+        <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted">
+          {index} / {label}
+        </p>
+        <h2 className={titleClass}>{title}</h2>
+      </div>
+    );
+  }
+
   return (
     <m.div
       className={className}

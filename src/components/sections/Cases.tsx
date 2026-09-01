@@ -1,66 +1,35 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { m, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import SectionHeading from '@/components/ui/SectionHeading';
 import MestiCaseShowcase from '@/components/cases/MestiCaseShowcase';
 import ZazCaseShowcase from '@/components/cases/ZazCaseShowcase';
 import { useLanguage } from '@/components/providers/LanguageProvider';
-
-interface ExtraCase {
-  id: string;
-  title: string;
-  tag: string;
-  year: string;
-  result: string;
-  url?: string;
-}
-
-const FEATURED_IDS = new Set(['01', '02']);
-const HIDDEN_IDS = new Set(['03', '04', '05', '06']);
-
-const DEFAULT_EXTRAS: ExtraCase[] = [
-  {
-    id: 'case-villa-palma',
-    title: 'Villa Palma Suite 4★',
-    tag: 'бутик-отель · сочи / адлер',
-    year: '2026',
-    result: 'официальный сайт 4★',
-    url: 'https://palmasochihotel.web.app/',
-  },
-];
+import { readExtraCases, type ExtraCase } from '@/lib/cases';
 
 export default function Cases() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const [dist, setDist] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
   const reduced = useReducedMotion();
   const { t } = useLanguage();
-  const [extraCases, setExtraCases] = useState<ExtraCase[]>(DEFAULT_EXTRAS);
-  const pin = !reduced;
+  const [extraCases, setExtraCases] = useState<ExtraCase[]>([]);
 
   useEffect(() => {
-    const readExtras = () => {
-      try {
-        const stored = localStorage.getItem('valence_crm_store');
-        if (!stored) {
-          setExtraCases(DEFAULT_EXTRAS);
-          return;
-        }
-        const parsed = JSON.parse(stored);
-        if (!Array.isArray(parsed.cases)) {
-          setExtraCases(DEFAULT_EXTRAS);
-          return;
-        }
-        const extras = (parsed.cases as ExtraCase[]).filter(
-          (c) => !FEATURED_IDS.has(c.id) && !HIDDEN_IDS.has(c.id),
-        );
-        setExtraCases(extras.length ? extras : DEFAULT_EXTRAS);
-      } catch {
-        setExtraCases(DEFAULT_EXTRAS);
-      }
-    };
+    const mq = window.matchMedia('(min-width: 768px)');
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
+  const pin = !reduced && isDesktop;
+
+  useEffect(() => {
+    const readExtras = () => setExtraCases(readExtraCases());
     readExtras();
     window.addEventListener('storage', readExtras);
     window.addEventListener('valence_crm_update', readExtras);
@@ -75,24 +44,18 @@ export default function Cases() {
     offset: ['start start', 'end end'],
   });
 
-  const mestiProgress = useTransform(scrollYProgress, [0, 0.38], [0, 1]);
-  const x = useTransform(scrollYProgress, [0.38, 0.92], [0, -dist]);
-  const zazProgress = useTransform(scrollYProgress, (p) => {
-    const start = 0.56;
-    const end = 0.9;
-    if (p <= start) return 0;
-    if (p >= end) return 1;
-    const t = (p - start) / (end - start);
-    return t * t * (3 - 2 * t);
-  });
+  const mestiProgress = useTransform(scrollYProgress, [0, 0.45], [0, 1]);
+  const x = useTransform(scrollYProgress, [0.45, 1], [0, -dist]);
   const [hint, setHint] = useState<string>(t.cases.mestiScrollHint);
 
   useMotionValueEvent(scrollYProgress, 'change', (p) => {
     if (!pin) return;
-    if (p < 0.38) setHint(t.cases.mestiScrollHint);
-    else if (p < 0.9) setHint(t.cases.zazScrollHint);
-    else setHint(t.cases.scrollHint);
+    setHint(p < 0.45 ? t.cases.mestiScrollHint : t.cases.zazScrollHint);
   });
+
+  useEffect(() => {
+    setHint(t.cases.mestiScrollHint);
+  }, [t.cases.mestiScrollHint, t.cases.zazScrollHint]);
 
   useEffect(() => {
     if (!pin) {
@@ -118,52 +81,63 @@ export default function Cases() {
   }, [extraCases.length, pin]);
 
   return (
-    <section id="work">
+    <section id="work" className="relative">
       <div
         ref={wrapRef}
         className="relative"
-        style={{ height: pin ? '460vh' : 'auto' }}
+        style={{ height: pin ? '380vh' : 'auto' }}
       >
         <div
           className={
             pin
-              ? 'sticky top-0 flex h-dvh flex-col overflow-hidden bg-bg pt-16 md:pt-6 lg:pt-8'
-              : 'bg-bg px-5 py-20 md:px-10 md:py-40'
+              ? 'sticky top-0 flex h-dvh flex-col overflow-hidden bg-bg pt-16 md:pt-20'
+              : 'bg-bg px-5 py-16 md:px-10 md:py-36'
           }
         >
           <div
             className={
               pin
-                ? 'relative z-20 shrink-0 border-b border-line/30 bg-bg px-5 pb-3 md:px-10 md:pb-4 lg:pb-5'
-                : 'relative z-20 px-5 md:px-10'
+                ? 'relative z-20 flex shrink-0 items-center justify-between gap-4 border-b border-line/30 bg-bg px-5 py-2.5 md:px-10 md:py-3'
+                : 'relative z-20 mb-8'
             }
           >
-            <div className="flex items-end justify-between gap-4">
-              <SectionHeading
-                pinned={pin}
-                compact
-                index={t.cases.headingIndex}
-                label={t.cases.headingLabel}
-                title={t.cases.headingTitle}
-              />
-              <p className="max-w-[42%] shrink-0 pb-0.5 text-right font-mono text-[9px] uppercase leading-snug tracking-[0.16em] text-muted md:max-w-[min(38vw,28rem)] md:pb-1 md:text-[11px] md:tracking-[0.25em]">
-                {pin ? hint : t.cases.scrollHint}
-              </p>
-            </div>
+            {pin ? (
+              <>
+                <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted md:text-[11px] md:tracking-[0.25em]">
+                  {t.cases.headingIndex} / {t.cases.headingLabel}
+                </p>
+                <p className="max-w-[55%] text-right font-mono text-[9px] uppercase leading-snug tracking-[0.16em] text-muted md:max-w-[min(40vw,28rem)] md:text-[11px] md:tracking-[0.25em]">
+                  {hint}
+                </p>
+              </>
+            ) : (
+              <div className="flex items-end justify-between gap-4">
+                <SectionHeading
+                  index={t.cases.headingIndex}
+                  label={t.cases.headingLabel}
+                  title={t.cases.headingTitle}
+                />
+              </div>
+            )}
           </div>
 
-          <div className={pin ? 'relative z-0 min-h-0 flex-1 overflow-hidden' : 'relative z-0 mt-10'}>
+          <div className={pin ? 'relative z-0 min-h-0 flex-1 overflow-hidden' : 'relative z-0'}>
             <m.div
               ref={trackRef}
               style={pin ? { x } : undefined}
               className={
                 pin
-                  ? 'absolute inset-x-0 top-0 flex h-full w-max items-stretch gap-10 px-5 pt-3 will-change-transform md:gap-16 md:px-10 md:pt-4'
-                  : 'flex w-full flex-col gap-16 px-5 md:px-10'
+                  ? 'absolute inset-0 flex h-full w-max items-stretch gap-10 px-5 will-change-transform md:gap-14 md:px-10'
+                  : 'flex w-full flex-col gap-14 md:gap-20'
               }
             >
-              <MestiCaseShowcase progress={pin ? mestiProgress : undefined} openLabel={t.cases.openCase} />
-              <ZazCaseShowcase progress={pin ? zazProgress : undefined} openLabel={t.cases.openCase} />
+              <MestiCaseShowcase
+                progress={pin ? mestiProgress : undefined}
+                openLabel={t.cases.openCase}
+                readCaseHref="/cases/mesti"
+                readCaseLabel={t.casesPage.readCase}
+              />
+              <ZazCaseShowcase readCaseHref="/cases/zaz" readCaseLabel={t.casesPage.readCase} />
               {extraCases.map((c) => (
                 <a
                   key={c.id}
@@ -171,17 +145,16 @@ export default function Cases() {
                   target={c.url ? '_blank' : undefined}
                   rel={c.url ? 'noopener noreferrer' : undefined}
                   data-cursor="view"
-                  className="flex w-[min(72vw,420px)] shrink-0 flex-col justify-center border-l border-line pl-6 md:w-[min(34vw,420px)] md:pl-10"
+                  className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-line/30 bg-bg2/30 p-8 backdrop-blur-sm transition-all duration-300 hover:border-accent/40 md:w-[min(88vw,78rem)]"
                 >
-                  <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted">
-                    {c.tag} — {c.year}
-                  </p>
-                  <h3 className="mt-3 font-display text-2xl font-extrabold tracking-tight md:text-3xl">
+                  <div className="flex items-center justify-between font-mono text-xs text-muted">
+                    <span>{c.tag || 'CASE STUDY'}</span>
+                    <span className="text-accent">→</span>
+                  </div>
+                  <h3 className="mt-4 font-display text-2xl font-bold tracking-tight text-text md:text-3xl">
                     {c.title}
                   </h3>
-                  <span className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-accent">
-                    {c.result}
-                  </span>
+                  <p className="mt-2 text-sm text-muted">{c.result}</p>
                 </a>
               ))}
             </m.div>

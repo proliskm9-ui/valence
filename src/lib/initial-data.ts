@@ -143,15 +143,6 @@ export const INITIAL_DATA: DbSchema = {
       image: '/cases/mesti-desktop.png',
       createdAt: '2026-07-30T10:00:00.000Z',
     },
-    {
-      id: 'case-villa-palma',
-      title: 'Villa Palma Suite 4★',
-      tag: 'бутик-отель · сочи / адлер',
-      year: '2026',
-      result: 'официальный сайт 4★',
-      url: 'https://palmasochihotel.web.app/',
-      createdAt: '2026-08-16T10:00:00.000Z',
-    },
   ],
   clients: [
     {

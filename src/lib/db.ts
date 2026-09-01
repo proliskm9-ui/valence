@@ -208,15 +208,6 @@ export const INITIAL_DATA: DbSchema = {
       image: '/cases/mesti-desktop.png',
       createdAt: new Date(Date.now() - 15 * 86400000).toISOString(),
     },
-    {
-      id: 'case-villa-palma',
-      title: 'Villa Palma Suite 4★',
-      tag: 'бутик-отель · сочи / адлер',
-      year: '2026',
-      result: 'официальный сайт 4★',
-      url: 'https://palmasochihotel.web.app/',
-      createdAt: new Date().toISOString(),
-    },
   ],
   clients: [
     {

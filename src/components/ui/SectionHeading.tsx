@@ -3,8 +3,12 @@
 import { m } from 'framer-motion';
 import { EASE_OUT_EXPO } from '@/lib/site';
 
-// ВАЖНО: whileInView стоит на внешнем контейнере, а не на h2 —
-// h2 стартует полностью обрезанным overflow-hidden, и IO его «не видит».
+// ВАЖНО: whileInView стоит на внешнем контейнере, а не на h2 — так его видит
+// IntersectionObserver независимо от анимации заголовка.
+//
+// Раньше заголовок «выезжал» из-под clip-маски (overflow-y-clip + translateY),
+// но на части мобильных браузеров эта связка иногда не перерисовывалась —
+// заменили на простой fade+rise, который не может «залипнуть» невидимым.
 
 /** Мono-лейбл «01 / услуги» + крупный заголовок секции */
 export default function SectionHeading({
@@ -14,6 +18,7 @@ export default function SectionHeading({
   className = '',
   pinned = false,
   compact = false,
+  as = 'h2',
 }: {
   index: string;
   label: string;
@@ -23,7 +28,11 @@ export default function SectionHeading({
   pinned?: boolean;
   /** Компактный заголовок внутри pin-секции (кейсы) */
   compact?: boolean;
+  /** h1 — для главного заголовка отдельной страницы, h2 — для секции внутри неё */
+  as?: 'h1' | 'h2';
 }) {
+  const Tag = as;
+  const MotionTag = m[as];
   const titleClass = compact
     ? 'mt-2 font-display text-[clamp(1.6rem,7vw,3.25rem)] font-extrabold leading-[1.05] tracking-tight md:mt-4'
     : 'mt-4 font-display text-[clamp(2rem,6vw,5.5rem)] font-extrabold leading-[1.05] tracking-tight md:mt-6';
@@ -34,7 +43,7 @@ export default function SectionHeading({
         <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted">
           {index} / {label}
         </p>
-        <h2 className={titleClass}>{title}</h2>
+        <Tag className={titleClass}>{title}</Tag>
       </div>
     );
   }
@@ -55,21 +64,19 @@ export default function SectionHeading({
       >
         {index} / {label}
       </m.p>
-      {/* клип только по вертикали: длинное слово не режется по ширине */}
-      <div className="mt-4 overflow-x-visible overflow-y-clip md:mt-6">
-        <m.h2
-          variants={{
-            hidden: { y: '110%' },
-            visible: {
-              y: '0%',
-              transition: { duration: 0.9, ease: EASE_OUT_EXPO },
-            },
-          }}
-          className="font-display text-[clamp(2rem,6vw,5.5rem)] font-extrabold leading-[1.05] tracking-tight"
-        >
-          {title}
-        </m.h2>
-      </div>
+      <MotionTag
+        variants={{
+          hidden: { y: 28, opacity: 0 },
+          visible: {
+            y: 0,
+            opacity: 1,
+            transition: { duration: 0.8, ease: EASE_OUT_EXPO },
+          },
+        }}
+        className="mt-4 font-display text-[clamp(2rem,6vw,5.5rem)] font-extrabold leading-[1.05] tracking-tight md:mt-6"
+      >
+        {title}
+      </MotionTag>
     </m.div>
   );
 }

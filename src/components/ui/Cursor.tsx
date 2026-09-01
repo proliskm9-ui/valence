@@ -13,8 +13,8 @@ import { useLanguage } from '@/components/providers/LanguageProvider';
 type Variant = 'default' | 'hover' | 'view';
 
 /**
- * Кастомный курсор. Работает только на точных указателях (мышь),
- * уважает prefers-reduced-motion. Элементы помечаются data-cursor="hover" | "view".
+ * Кастомный курсор. Работает только на десктопе с точным указателем (мышь),
+ * уважает prefers-reduced-motion. Полностью скрыт на мобильных устройствах.
  */
 export default function Cursor() {
   const reduced = useReducedMotion();
@@ -22,6 +22,7 @@ export default function Cursor() {
   const [visible, setVisible] = useState(false);
   const [variant, setVariant] = useState<Variant>('default');
   const [pressed, setPressed] = useState(false);
+  const [onStage, setOnStage] = useState(false);
   const { t } = useLanguage();
 
   const mx = useMotionValue(-100);
@@ -33,7 +34,10 @@ export default function Cursor() {
 
   useEffect(() => {
     if (reduced) return;
+    if (typeof window === 'undefined') return;
+    if (window.innerWidth < 768) return;
     if (!window.matchMedia('(pointer: fine)').matches) return;
+
     setEnabled(true);
     document.documentElement.classList.add('has-cursor');
 
@@ -41,6 +45,8 @@ export default function Cursor() {
       mx.set(e.clientX);
       my.set(e.clientY);
       setVisible(true);
+      const overStage = !!(e.target as Element | null)?.closest?.('.mcs-stage');
+      setOnStage(overStage);
     };
     const onOver = (e: MouseEvent) => {
       const el = (e.target as Element).closest?.('[data-cursor]');
@@ -72,15 +78,19 @@ export default function Cursor() {
     (variant === 'hover' ? 2.6 : variant === 'view' ? 0 : 1) * (pressed ? 0.8 : 1);
 
   return (
-    <>
+    <div className="hidden md:block">
       {/* точка */}
       <m.div
-        className="pointer-events-none fixed left-0 top-0 z-[85] mix-blend-difference"
+        className={`pointer-events-none fixed left-0 top-0 z-[85]${onStage ? '' : ' mix-blend-difference'}`}
         style={{ x: dotX, y: dotY, opacity: visible ? 1 : 0 }}
         aria-hidden
       >
         <m.div
-          className="h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white"
+          className={`h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full${
+            onStage
+              ? ' bg-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.35),0_0_18px_rgba(255,255,255,0.35)]'
+              : ' bg-white'
+          }`}
           animate={{ scale }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
         />
@@ -106,6 +116,6 @@ export default function Cursor() {
           )}
         </AnimatePresence>
       </m.div>
-    </>
+    </div>
   );
 }

@@ -20,19 +20,3 @@ export default function CaseOpenLink({ href, label, className = '' }: Props) {
     </a>
   );
 }
-
-export function CaseCtaOverlay({
-  href,
-  label,
-  visible,
-}: {
-  href: string;
-  label: string;
-  visible: boolean;
-}) {
-  return (
-    <div className={`case-cta-overlay${visible ? ' is-on' : ''}`}>
-      <CaseOpenLink href={href} label={label} />
-    </div>
-  );
-}

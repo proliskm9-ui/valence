@@ -1,13 +1,24 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { type MotionValue, useMotionValue, useMotionValueEvent, useReducedMotion } from 'framer-motion';
+import Link from 'next/link';
+import {
+  AnimatePresence,
+  m,
+  type MotionValue,
+  useMotionValue,
+  useMotionValueEvent,
+  useReducedMotion,
+} from 'framer-motion';
 import { useLanguage } from '@/components/providers/LanguageProvider';
-import { CaseCtaOverlay } from '@/components/cases/CaseOpenLink';
-import { MacChrome, PhoneChrome } from '@/components/cases/DeviceChrome';
+import CaseOpenLink from '@/components/cases/CaseOpenLink';
+import { MacBookAirChrome, PhoneAssetChrome } from '@/components/cases/DeviceChrome';
 import { useCaseCta } from '@/components/cases/useCaseCta';
 import type { Language } from '@/lib/i18n';
 import './mesti-hero-overlay.css';
+
+type CaseView = 'desktop' | 'mobile';
+const MOBILE_MQ = '(max-width: 767px)';
 
 const MESTI_LANGS: { code: Language; name: string; flag: string }[] = [
   { code: 'ru', name: 'RU', flag: '/cases/mesti-ui/RU.png' },
@@ -16,11 +27,13 @@ const MESTI_LANGS: { code: Language; name: string; flag: string }[] = [
 ];
 
 const FRAME_COUNT = 240;
-const POSTER = '/cases/mesti-hero/poster.webp';
+const POSTER = '/cases/mesti-hero/poster.webp?v=wm7';
 const LIVE_URL = 'https://mestidelivery.com/';
+const SHOT_HOME = '/cases/mesti-shots/home.png?v=4';
+const SHOT_MENU = '/cases/mesti-shots/menu.png?v=4';
+const SHOT_RESTAURANTS = '/cases/mesti-shots/restaurants.png?v=4';
 const FADE = 0.07;
 const DESKTOP = { w: 1440, h: 900 };
-const PHONE = { w: 390, h: 844 };
 
 const CHAPTERS = [
   { from: 0.12, to: 0.34, side: 'right' as const, num: '01', title: 'mestiCh1Title' as const, desc: 'mestiCh1Desc' as const },
@@ -41,15 +54,26 @@ function chapterVis(p: number, from: number, to: number) {
 }
 
 function frameSrc(dir: 'desktop' | 'mobile', index: number) {
-  return `/cases/mesti-hero/${dir}/frame_${String(index + 1).padStart(4, '0')}.webp`;
+  return `/cases/mesti-hero/${dir}/frame_${String(index + 1).padStart(4, '0')}.webp?v=wm7`;
 }
 
 type Props = {
   progress?: MotionValue<number>;
   openLabel: string;
+  /** Заданы только в общей ленте на главной — ведут на отдельную страницу кейса. */
+  readCaseHref?: string;
+  readCaseLabel?: string;
+  /** h1 — когда компонент это главный заголовок отдельной страницы кейса. */
+  titleTag?: 'h1' | 'h3';
 };
 
-export default function MestiCaseShowcase({ progress, openLabel }: Props) {
+export default function MestiCaseShowcase({
+  progress,
+  openLabel,
+  readCaseHref,
+  readCaseLabel,
+  titleTag = 'h3',
+}: Props) {
   const { t, lang } = useLanguage();
   const currentLang = MESTI_LANGS.find((item) => item.code === lang) ?? MESTI_LANGS[0];
   const reduced = useReducedMotion();
@@ -63,13 +87,12 @@ export default function MestiCaseShowcase({ progress, openLabel }: Props) {
   const hintRef = useRef<HTMLDivElement>(null);
   const chapterRefs = useRef<(HTMLElement | null)[]>([null, null, null, null]);
 
-  const [view, setView] = useState<'desktop' | 'mobile'>('desktop');
+  const [view, setView] = useState<CaseView>('desktop');
   const isPhone = view === 'mobile';
+  const viewLocked = useRef(false);
   const [inRange, setInRange] = useState(false);
   const [loaded, setLoaded] = useState(0);
-  const isPhoneRef = useRef(false);
   const reducedRef = useRef(!!reduced);
-  isPhoneRef.current = isPhone;
   reducedRef.current = !!reduced;
 
   const frames = useRef<(HTMLImageElement | null)[]>([]);
@@ -85,13 +108,17 @@ export default function MestiCaseShowcase({ progress, openLabel }: Props) {
   const source = progress ?? fallbackProgress;
   const cta = useCaseCta(progress);
 
+  // Default: PC MacBook screen on all viewports for consistent presentation
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
-    const sync = () => setView(mq.matches ? 'mobile' : 'desktop');
-    sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
+    if (!viewLocked.current) {
+      setView('desktop');
+    }
   }, []);
+
+  const selectView = (next: CaseView) => {
+    viewLocked.current = true;
+    setView(next);
+  };
 
   const stampOutWatermark = (ctx: CanvasRenderingContext2D, cw: number, ch: number) => {
     const sw = Math.max(40, Math.round(cw * 0.055));
@@ -216,7 +243,7 @@ export default function MestiCaseShowcase({ progress, openLabel }: Props) {
 
   useEffect(() => {
     const el = screenRef.current;
-    if (!el) return;
+    if (!el || isPhone) return;
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) setInRange(true);
@@ -225,16 +252,25 @@ export default function MestiCaseShowcase({ progress, openLabel }: Props) {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [isPhone]);
 
   useLayoutEffect(() => {
-    const screen = screenRef.current;
-    const canvas = canvasRef.current;
-    if (!screen || !canvas) return;
+    if (isPhone) return;
+
+    let ro: ResizeObserver | null = null;
+    let raf = 0;
+    let cancelled = false;
 
     const resize = () => {
+      const screen = screenRef.current;
+      const canvas = canvasRef.current;
+      if (!screen || !canvas) return false;
+
       const layoutW = Math.max(1, screen.clientWidth);
       const layoutH = Math.max(1, screen.clientHeight);
+      // Screen not laid out yet (AnimatePresence / flex chrome still settling)
+      if (screen.clientWidth < 2 || screen.clientHeight < 2) return false;
+
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.max(1, Math.round(layoutW * dpr));
       canvas.height = Math.max(1, Math.round(layoutH * dpr));
@@ -243,28 +279,45 @@ export default function MestiCaseShowcase({ progress, openLabel }: Props) {
 
       const overlay = overlayRef.current;
       if (overlay) {
-        const phone = isPhoneRef.current;
-        const design = phone ? PHONE : DESKTOP;
-        overlay.style.width = `${design.w}px`;
-        overlay.style.height = `${design.h}px`;
-        const scale = Math.min(layoutW / design.w, layoutH / design.h);
-        const x = (layoutW - design.w * scale) / 2;
-        const y = (layoutH - design.h * scale) / 2;
+        overlay.style.width = `${DESKTOP.w}px`;
+        overlay.style.height = `${DESKTOP.h}px`;
+        /* Cover the MacBook screen slot — contain left letterbox bars top/bottom. */
+        const scale = Math.max(layoutW / DESKTOP.w, layoutH / DESKTOP.h);
+        const x = (layoutW - DESKTOP.w * scale) / 2;
+        const y = (layoutH - DESKTOP.h * scale) / 2;
         overlay.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+        overlay.classList.add('is-scaled');
       }
+      return true;
     };
 
-    resize();
-    const ro = new ResizeObserver(resize);
-    ro.observe(screen);
-    return () => ro.disconnect();
+    const bind = () => {
+      if (cancelled) return;
+      if (!resize()) {
+        raf = requestAnimationFrame(bind);
+        return;
+      }
+      const screen = screenRef.current;
+      if (!screen) return;
+      ro = new ResizeObserver(() => {
+        resize();
+      });
+      ro.observe(screen);
+    };
+
+    bind();
+
+    return () => {
+      cancelled = true;
+      if (raf) cancelAnimationFrame(raf);
+      ro?.disconnect();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPhone, reduced]);
 
   useEffect(() => {
-    if (!inRange || reduced) return;
+    if (!inRange || reduced || isPhone) return;
 
-    const dir = isPhone ? 'mobile' : 'desktop';
     const arr: (HTMLImageElement | null)[] = new Array(FRAME_COUNT).fill(null);
     frames.current = arr;
     ready.current = new Uint8Array(FRAME_COUNT);
@@ -296,7 +349,7 @@ export default function MestiCaseShowcase({ progress, openLabel }: Props) {
                 res();
               };
               img.onerror = () => res();
-              img.src = frameSrc(dir, idx);
+              img.src = frameSrc('desktop', idx);
               arr[idx] = img;
             });
           }),
@@ -321,15 +374,14 @@ export default function MestiCaseShowcase({ progress, openLabel }: Props) {
   }, [t, reduced]);
 
   const loadPct = Math.round(loaded * 100);
-  const title2Raw = t.cases.mestiHero2;
-  const outlineLines = isPhone ? title2Raw.split('\n') : [title2Raw.replace(/\n/g, ' ')];
+  const outlineLines = [t.cases.mestiHero2.replace(/\n/g, ' ')];
   const title4 = t.cases.mestiCh4Title.split('\n');
 
-  const screen = (
-    <div ref={screenRef} className="mcs-screen">
+  const liveScreen = (
+    <div ref={screenRef} className="mcs-screen mcs-screen--live">
       <img ref={posterRef} src={POSTER} alt="" className="mcs-poster" />
       <canvas ref={canvasRef} className="mcs-canvas" />
-      <div ref={overlayRef} className={`mcs-overlay${isPhone ? ' is-phone' : ''}`}>
+      <div ref={overlayRef} className="mcs-overlay">
         <div className="sh-scrim" />
         <div className="sh-vignette" />
         <div className="sh-glow" />
@@ -387,7 +439,9 @@ export default function MestiCaseShowcase({ progress, openLabel }: Props) {
         <div ref={centerRef} className="sh-center">
           <div className="sh-center-body">
             <span className="sh-eyebrow">MestiDelivery · Mestia</span>
-            <h1 className="sh-title">
+            {/* Это воссоздание чужого сайта внутри макета устройства, а не
+                заголовок страницы Valence — намеренно не <h1>/<h2>. */}
+            <p className="sh-title">
               <span className="sh-title-solid">{t.cases.mestiHero1}</span>
               <span className="sh-title-outline">
                 {outlineLines.map((line) => (
@@ -396,7 +450,7 @@ export default function MestiCaseShowcase({ progress, openLabel }: Props) {
                   </span>
                 ))}
               </span>
-            </h1>
+            </p>
             <p className="sh-subtitle">{t.cases.mestiHeroSub}</p>
             <span className="sh-cta">
               <span>{t.cases.mestiCta}</span>
@@ -469,14 +523,34 @@ export default function MestiCaseShowcase({ progress, openLabel }: Props) {
     </div>
   );
 
-  const slide = (
-    <article className="mcs-slide" onMouseEnter={cta.onEnter} onMouseLeave={cta.onLeave}>
-      <div className="mcs-head">
-        <p className="mcs-head-tag">01 / {t.cases.mestiDeliveryTag}</p>
-        <h3 className="mcs-head-title">MestiDelivery</h3>
+  return (
+    <article className={`mcs-slide${cta.visible ? ' is-cta' : ''}`}>
+      <div
+        className="mcs-head"
+        onMouseEnter={cta.onHeadEnter}
+        onMouseLeave={cta.onHeadLeave}
+      >
+        <div className="mcs-head-copy">
+          <p className="mcs-head-tag text-accent font-mono text-[10.5px] uppercase font-bold tracking-[0.2em]">
+            01 // {t.cases.mestiDeliveryTag}
+          </p>
+          {(() => {
+            const TitleTag = titleTag;
+            return <TitleTag className="mcs-head-title">MestiDelivery</TitleTag>;
+          })()}
+        </div>
       </div>
 
-      <div className="mcs-stage">
+      <div
+        className={`mcs-stage mcs-stage--mesti${isPhone ? ' is-phones' : ' is-macbook'}`}
+        onMouseEnter={cta.onStageEnter}
+        onMouseLeave={cta.onStageLeave}
+      >
+        <div className="mcs-stage-atmos" aria-hidden>
+          <div className="mcs-stage-photo" />
+          <div className="mcs-stage-grade" />
+          <div className="mcs-stage-grain" />
+        </div>
         <a
           href={LIVE_URL}
           target="_blank"
@@ -484,25 +558,102 @@ export default function MestiCaseShowcase({ progress, openLabel }: Props) {
           className="case-hit"
           aria-label={t.cases.openCase}
         />
-        <div className={`mcs-device ${isPhone ? 'mcs-device--phone' : 'mcs-device--mac'}`}>
-          {isPhone ? <PhoneChrome>{screen}</PhoneChrome> : <MacChrome>{screen}</MacChrome>}
+        <div className={`mcs-device ${isPhone ? 'mcs-device--trio' : 'mcs-device--macbook'}`}>
+          <AnimatePresence initial={false}>
+            <m.div
+              key={view}
+              className="mcs-device-swap"
+              initial={reduced ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={reduced ? undefined : { opacity: 0 }}
+              transition={
+                reduced
+                  ? { duration: 0 }
+                  : { duration: 0.28, ease: [0.22, 1, 0.36, 1] }
+              }
+            >
+              {isPhone ? (
+                <div className="mcs-trio-row">
+                  <PhoneAssetChrome className="mcs-trio mcs-trio--side mcs-trio--left">
+                    <img src={SHOT_RESTAURANTS} alt="" className="mcs-shot" />
+                  </PhoneAssetChrome>
+                  <PhoneAssetChrome className="mcs-trio mcs-trio--hero">
+                    <img src={SHOT_HOME} alt="" className="mcs-shot" />
+                  </PhoneAssetChrome>
+                  <PhoneAssetChrome className="mcs-trio mcs-trio--side mcs-trio--right">
+                    <img src={SHOT_MENU} alt="" className="mcs-shot" />
+                  </PhoneAssetChrome>
+                </div>
+              ) : (
+                <MacBookAirChrome>{liveScreen}</MacBookAirChrome>
+              )}
+            </m.div>
+          </AnimatePresence>
         </div>
-        <div className="case-stage-legend case-stage-legend--dark">
-          <button type="button" className={view === 'desktop' ? 'is-on' : ''} onClick={() => setView('desktop')}>
-            PC
-          </button>
-          <button type="button" className={view === 'mobile' ? 'is-on' : ''} onClick={() => setView('mobile')}>
-            Mobile
-          </button>
+
+        <div
+          className="case-view-toggle"
+          role="group"
+          aria-label={lang === 'en' ? 'Device preview' : lang === 'ka' ? 'მოწყობილობის გადახედვა' : 'Превью устройства'}
+        >
+          <m.span
+            className="case-view-toggle__pill"
+            aria-hidden
+            initial={false}
+            animate={{ x: view === 'desktop' ? 0 : '100%' }}
+            transition={
+              reduced
+                ? { duration: 0 }
+                : { type: 'spring', stiffness: 480, damping: 38, mass: 0.7 }
+            }
+          />
+          {(
+            [
+              {
+                id: 'desktop' as const,
+                label: 'PC',
+                title: lang === 'en' ? 'Desktop' : lang === 'ka' ? 'დესკტოპი' : 'Компьютер',
+              },
+              {
+                id: 'mobile' as const,
+                label: 'Mob',
+                title: lang === 'en' ? 'Mobile' : lang === 'ka' ? 'მობილური' : 'Мобильный',
+              },
+            ] as const
+          ).map((opt) => {
+            const on = view === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                className={`case-view-toggle__btn${on ? ' is-on' : ''}`}
+                aria-pressed={on}
+                title={opt.title}
+                onClick={() => selectView(opt.id)}
+              >
+                <span className="case-view-toggle__label">
+                  {opt.id === 'desktop' ? (
+                    <svg className="case-view-toggle__icon" viewBox="0 0 24 24" aria-hidden>
+                      <rect x="3" y="4" width="18" height="12" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.7" />
+                      <path d="M8 20h8M12 16v4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                    </svg>
+                  ) : (
+                    <svg className="case-view-toggle__icon" viewBox="0 0 24 24" aria-hidden>
+                      <rect x="7" y="2.5" width="10" height="19" rx="2.2" fill="none" stroke="currentColor" strokeWidth="1.7" />
+                      <path d="M10.5 18.5h3" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                    </svg>
+                  )}
+                  {opt.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
-        <CaseCtaOverlay href={LIVE_URL} label={t.cases.openCase} visible={cta.visible} />
       </div>
 
-      <p className="mcs-note mt-2 hidden font-mono text-[10px] uppercase tracking-[0.2em] text-muted md:mt-4 md:block">
+      <p className="mcs-note hidden font-mono text-[10px] uppercase tracking-[0.2em] text-muted md:block">
         {t.cases.mestiDeliveryResult}
       </p>
     </article>
   );
-
-  return slide;
 }

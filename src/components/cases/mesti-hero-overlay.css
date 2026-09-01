@@ -16,6 +16,12 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: geometricPrecision;
+  /* Hidden until JS applies cover-scale — avoids huge unscaled flash on remount */
+  opacity: 0;
+}
+
+.mcs-overlay.is-scaled {
+  opacity: 1;
 }
 
 .mcs-overlay.is-phone {

@@ -23,11 +23,15 @@
 
 html {
   background: #0a0a0b;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 body {
   @apply bg-bg font-sans text-fg antialiased;
-  overflow-x: clip;
+  max-width: 100vw;
+  overflow-x: hidden;
+  position: relative;
 }
 
 ::selection {
@@ -74,6 +78,22 @@ body::after {
   }
 }
 
+/* ── Глобальный кинетический дрейф фона ─────────────────────── */
+@keyframes ambient-drift {
+  0% {
+    transform: translate3d(0%, 0%, 0) rotate(0deg) scale(1);
+  }
+  33% {
+    transform: translate3d(4%, 3%, 0) rotate(3deg) scale(1.04);
+  }
+  66% {
+    transform: translate3d(-3%, 5%, 0) rotate(-2deg) scale(0.97);
+  }
+  100% {
+    transform: translate3d(2%, -4%, 0) rotate(1deg) scale(1.02);
+  }
+}
+
 /* ── Бегущая строка ────────────────────────────────────────── */
 @keyframes marquee {
   to {
@@ -111,18 +131,13 @@ html.lenis body {
 .case-stage {
   position: relative;
   overflow: hidden;
-  aspect-ratio: 16 / 10;
-  min-height: 280px;
   border-radius: 2px;
   background: #0e2030;
 }
 
 .case-stage--zaz {
-  background:
-    radial-gradient(ellipse 90% 78% at 24% 36%, #f6ecd8 0%, transparent 58%),
-    radial-gradient(ellipse 42% 38% at 86% 76%, rgba(75, 121, 114, 0.32) 0%, transparent 72%),
-    radial-gradient(ellipse 24% 20% at 70% 18%, rgba(222, 161, 46, 0.14) 0%, transparent 70%),
-    #e8d4b0;
+  /* legacy — ZAZ now uses .mcs-stage--zaz */
+  background: #1a1612;
 }
 
 .case-stage--mesti {
@@ -163,8 +178,8 @@ html.lenis body {
   object-position: top center;
 }
 
-.case-stage--zaz .mcs-mac {
-  filter: drop-shadow(0 24px 36px rgba(62, 48, 22, 0.28));
+.case-stage--zaz .mcs-browser {
+  box-shadow: 0 28px 60px -24px rgba(62, 48, 22, 0.45);
 }
 
 .case-stage--zaz .mcs-device--phone {
@@ -195,6 +210,8 @@ html.lenis body {
   height: 900px;
   border: 0;
   background: #221a12;
+  /* Static showcase: the page never scroll-jacks, clicks go to the open-site link */
+  pointer-events: none;
 }
 
 .zaz-iframe-scaler[data-view='mobile'] .zaz-iframe {
@@ -277,35 +294,10 @@ html.lenis body {
   display: none;
 }
 
-.case-cta-overlay {
-  display: none;
-}
-
-@media (min-width: 768px) {
-  .case-cta-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 3;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding-bottom: 28px;
-    background: linear-gradient(180deg, transparent 48%, rgba(5, 6, 6, 0.55) 100%);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.28s ease;
-  }
-
-  .case-cta-overlay.is-on {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-
 .case-stage-legend {
   position: absolute;
-  right: 14px;
-  bottom: 12px;
+  right: 18px;
+  bottom: 16px;
   z-index: 4;
   display: flex;
   gap: 6px;
@@ -343,17 +335,162 @@ html.lenis body {
   border-color: #21ea7c;
 }
 
-/* ── Mesti case slide: MacBook Pro frame + live screen ─ */
+/* Mesti device toggle — bottom-right of stage */
+.case-view-toggle {
+  position: absolute;
+  z-index: 5;
+  right: 14px;
+  left: auto;
+  top: auto;
+  bottom: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 112px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(8, 10, 9, 0.58);
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  transform: none;
+}
+
+.case-view-toggle__btn {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 7px 4px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  border-radius: 999px;
+  transition: color 0.22s ease;
+}
+
+.case-view-toggle__btn:hover {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.case-view-toggle__btn.is-on {
+  color: #07110b;
+}
+
+.case-view-toggle__btn:focus-visible {
+  outline: 2px solid rgba(33, 234, 124, 0.7);
+  outline-offset: 2px;
+}
+
+/* 1px inset all around in both PC and Mob positions */
+.case-view-toggle__pill {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  left: 1px;
+  width: calc(50% - 1px);
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #3af292 0%, #21ea7c 55%, #18c968 100%);
+  box-shadow:
+    0 4px 12px rgba(33, 234, 124, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  will-change: transform;
+}
+
+.case-view-toggle__label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.case-view-toggle__icon {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  opacity: 0.95;
+}
+
+.mcs-device-swap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 767px) {
+  .case-view-toggle {
+    right: 10px;
+    left: auto;
+    bottom: 10px;
+    width: 104px;
+  }
+
+  .case-view-toggle__btn {
+    padding: 6px 3px;
+  }
+
+  .case-view-toggle__label {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+}
+
+/* ── Case slides: fill pin viewport under site header ─ */
 .mcs-slide {
   display: flex;
-  width: min(92vw, 1100px);
+  width: min(90vw, 1120px);
+  height: 100%;
+  min-height: 0;
   flex-shrink: 0;
   flex-direction: column;
   justify-content: flex-start;
+  padding: 0.55rem 0 0.65rem;
+  box-sizing: border-box;
 }
 
 .mcs-head {
+  display: flex;
   flex-shrink: 0;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mcs-head-copy {
+  min-width: 0;
+}
+
+.mcs-read-case {
+  display: inline-flex;
+  margin-top: 6px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  transition: color 0.3s ease;
+}
+
+.mcs-read-case:hover {
+  color: var(--color-fg);
 }
 
 .mcs-head-tag {
@@ -366,22 +503,281 @@ html.lenis body {
 }
 
 .mcs-head-title {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   font-family: var(--font-display), sans-serif;
-  font-size: clamp(1.35rem, 5vw, 2.75rem);
+  font-size: clamp(1.25rem, 3.2vw, 2.1rem);
   font-weight: 800;
   line-height: 1.05;
   letter-spacing: -0.02em;
+  transition: color 0.35s ease;
+}
+
+@media (min-width: 768px) {
+  .mcs-head-copy {
+    cursor: default;
+  }
+
+  .mcs-slide.is-cta .mcs-head-title,
+  .mcs-head:hover .mcs-head-title,
+  .mcs-head:focus-within .mcs-head-title {
+    color: var(--color-accent, #ff4d00);
+  }
+}
+
+/* CTA beside the title — slides/fades in (desktop hover); always on mobile */
+.mcs-head-cta {
+  opacity: 0;
+  transform: translate3d(18px, 0, 0) scale(0.92);
+  filter: blur(6px);
+  pointer-events: none;
+  transition:
+    opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mcs-slide.is-cta .mcs-head-cta,
+.mcs-head:hover .mcs-head-cta,
+.mcs-head:focus-within .mcs-head-cta {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  filter: blur(0);
+  pointer-events: auto;
+}
+
+.mcs-note {
+  flex-shrink: 0;
+  margin-top: 0.55rem;
 }
 
 .mcs-stage {
   position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: stretch;
+  justify-content: stretch;
+  width: 100%;
+  min-height: 0;
+  margin-top: 0.65rem;
   overflow: hidden;
-  aspect-ratio: 16 / 10;
-  min-height: 280px;
-  margin-top: 1.25rem;
   border-radius: 2px;
+  container-type: size;
   background: radial-gradient(ellipse 85% 75% at 72% 42%, #1a4d32 0%, #0c1610 48%, #070908 100%);
+}
+
+.case-stage {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 2px;
+  container-type: size;
+  background: #0e2030;
+}
+
+.mcs-stage--mesti {
+  background: #120c08;
+}
+
+/* Mesti stage: final hero — khinkali on plate (frame_0240) */
+.mcs-stage-atmos {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.mcs-stage-photo {
+  position: absolute;
+  inset: -6% -3% -2%;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(18, 12, 8, 0.28) 0%,
+      rgba(18, 12, 8, 0.05) 40%,
+      rgba(18, 12, 8, 0.18) 100%
+    ),
+    url('/cases/stage-mesti.webp?v=27') center 55% / cover no-repeat;
+  filter: saturate(1.08) contrast(1.06) brightness(1.02);
+}
+
+.mcs-stage--mesti.is-phones .mcs-stage-photo {
+  background-position: center 58%;
+  filter: saturate(1.05) contrast(1.04) brightness(1.05);
+}
+
+.mcs-stage-grade {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 50% 42% at 30% 32%, rgba(210, 110, 36, 0.22) 0%, transparent 58%),
+    radial-gradient(ellipse 36% 32% at 80% 60%, rgba(160, 80, 28, 0.1) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(10, 7, 5, 0.22) 0%, transparent 30%, rgba(8, 5, 4, 0.32) 100%),
+    radial-gradient(ellipse 88% 52% at 50% 100%, rgba(0, 0, 0, 0.28) 0%, transparent 55%);
+}
+
+/* Soft lift behind phone trio so side screens stay bright */
+.mcs-stage--mesti.is-phones .mcs-stage-grade {
+  background:
+    radial-gradient(ellipse 62% 52% at 50% 48%, rgba(255, 220, 180, 0.2) 0%, transparent 64%),
+    radial-gradient(ellipse 42% 48% at 18% 48%, rgba(255, 200, 150, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 42% 48% at 82% 48%, rgba(255, 200, 150, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 42% at 30% 32%, rgba(210, 110, 36, 0.12) 0%, transparent 58%),
+    linear-gradient(180deg, rgba(10, 7, 5, 0.08) 0%, transparent 36%, rgba(8, 5, 4, 0.14) 100%),
+    radial-gradient(ellipse 88% 52% at 50% 100%, rgba(0, 0, 0, 0.12) 0%, transparent 55%);
+}
+
+.mcs-stage--mesti.is-phones .mcs-stage-grain {
+  opacity: 0.07;
+}
+
+.mcs-stage-grain {
+  position: absolute;
+  inset: -30%;
+  opacity: 0.12;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+  mix-blend-mode: overlay;
+}
+
+/* ── RETRO ZAZ: workshop stage (log v929) + larger Mac, lower stone shelf ─ */
+.mcs-stage--zaz {
+  background: #16120f;
+}
+
+.zaz-atmos {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.zaz-atmos-photo {
+  position: absolute;
+  inset: -8% -4% -2%;
+  /* Zoom + lift crop: stones read as a low shelf, not a tall pedestal */
+  background:
+    linear-gradient(
+      180deg,
+      rgba(22, 18, 15, 0.4) 0%,
+      rgba(22, 18, 15, 0.12) 38%,
+      rgba(22, 18, 15, 0.28) 100%
+    ),
+    url('/cases/stage-zaz.png') center 52% / 118% auto no-repeat;
+  filter: saturate(0.95) contrast(1.06) brightness(0.88);
+}
+
+.zaz-atmos-grade {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 48% 42% at 10% 40%, rgba(196, 122, 44, 0.34) 0%, transparent 58%),
+    radial-gradient(ellipse 40% 36% at 88% 68%, rgba(14, 110, 94, 0.16) 0%, transparent 60%),
+    radial-gradient(ellipse 90% 55% at 50% 100%, rgba(0, 0, 0, 0.4) 0%, transparent 55%);
+}
+
+.zaz-atmos-grain {
+  position: absolute;
+  inset: -30%;
+  opacity: 0.16;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+  mix-blend-mode: overlay;
+}
+
+.mcs-device--zaz {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2% 1% 4.5%;
+}
+
+.zaz-mac {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(76cqw, 100%);
+}
+
+.mcs-stage--zaz .mcs-asset--pro,
+.zaz-mac > .mcs-asset--pro {
+  position: relative;
+  z-index: 1;
+  width: min(100%, calc(82cqh * 3944 / 2564)) !important;
+  height: auto !important;
+  max-height: 82cqh !important;
+  aspect-ratio: 3944 / 2564;
+  filter: drop-shadow(0 26px 46px rgba(0, 0, 0, 0.55));
+}
+
+.zaz-mac-shadow {
+  position: absolute;
+  left: 16%;
+  right: 16%;
+  bottom: 0.5%;
+  height: 12%;
+  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55) 0%, transparent 72%);
+  filter: blur(12px);
+  transform: translateY(40%);
+  pointer-events: none;
+}
+
+/*
+ * Side peeks — just under Mac lid; right a touch lower than left.
+ */
+.zaz-float {
+  position: absolute;
+  z-index: 2;
+  top: 48%;
+  width: min(20cqw, 188px);
+  aspect-ratio: 488 / 834;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #efe4cc;
+  box-shadow:
+    0 18px 36px rgba(8, 5, 2, 0.45),
+    0 0 0 1px rgba(239, 228, 204, 0.14);
+  transform-origin: center center;
+}
+
+.zaz-float--left {
+  left: 7%;
+  transform: translate3d(14%, -48%, 0) rotate(-5deg);
+}
+
+.zaz-float--right {
+  right: 7%;
+  width: min(20cqw, 188px);
+  transform: translate3d(-14%, -44%, 0) rotate(5deg);
+}
+
+.zaz-float-shot {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.case-stage-legend--zaz button.is-on {
+  color: #efe4cc;
+  background: #0e6e5e;
+  border-color: #0e6e5e;
 }
 
 .mcs-device {
@@ -393,129 +789,317 @@ html.lenis body {
   justify-content: center;
 }
 
-.mcs-device--mac {
+.mcs-device--macbook {
+  padding: 2% 2% 3%;
+}
+
+.mcs-device--dual {
+  gap: 0;
+  padding: 2% 3% 4%;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile trio: shelf — equal-weight phones, light hierarchy, readable sides */
+.mcs-device--trio {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 3% 5% 2%;
+  padding: 1.25% 1% 2%;
+}
+
+.mcs-trio-row {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  padding-bottom: 2%;
+}
+
+.mcs-trio-row::after {
+  content: '';
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 0.4%;
+  height: 10%;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 70% 55% at 50% 50%,
+    rgba(0, 0, 0, 0.28) 0%,
+    transparent 72%
+  );
+  filter: blur(12px);
+}
+
+.mcs-device--trio .mcs-trio.mcs-asset--phone {
+  position: relative;
+  flex: 0 0 auto;
+  width: auto;
+  margin: 0;
+  max-height: 100%;
+}
+
+/* Sides ≈ 90% of hero; ~10% width overlap; ~2° fan; lifted brightness */
+.mcs-device--trio .mcs-trio--side.mcs-asset--phone {
+  z-index: 2;
+  width: min(29.5cqw, calc(81cqh * 1406 / 2822));
+  height: auto;
+  max-height: 81cqh;
+  aspect-ratio: 1406 / 2822;
+  filter:
+    drop-shadow(0 14px 26px rgba(0, 0, 0, 0.32))
+    brightness(1.1)
+    contrast(1.04)
+    saturate(1.06);
+}
+
+.mcs-device--trio .mcs-trio--left.mcs-asset--phone {
+  z-index: 2;
+  margin-right: -2.4cqw;
+  transform: rotate(-2deg);
+}
+
+.mcs-device--trio .mcs-trio--right.mcs-asset--phone {
+  z-index: 2;
+  margin-left: -2.4cqw;
+  transform: rotate(2deg);
+}
+
+.mcs-device--trio .mcs-trio--hero.mcs-asset--phone {
+  z-index: 4;
+  width: min(32.8cqw, calc(90cqh * 1406 / 2822));
+  height: auto;
+  max-height: 90cqh;
+  aspect-ratio: 1406 / 2822;
+  transform: none;
+  filter: drop-shadow(0 20px 34px rgba(0, 0, 0, 0.4));
+}
+
+.mcs-device--trio .mcs-trio--side .mcs-shot {
+  filter: brightness(1.06) contrast(1.03);
+}
+
+/* PNG frame assets — content in transparent screen slot */
+.mcs-asset {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Contain MacBook in available stage box without cropping */
+.mcs-asset--macbook {
+  width: min(100cqw, calc(100cqh * 3260 / 2164));
+  height: min(100cqh, calc(100cqw * 2164 / 3260));
+  filter: drop-shadow(0 28px 48px rgba(0, 0, 0, 0.65));
+}
+
+.mcs-asset--air {
+  width: min(100cqw, calc(100cqh * 3260 / 2164));
+  height: min(100cqh, calc(100cqw * 2164 / 3260));
+}
+
+.mcs-asset--pro {
+  width: min(64cqw, calc(88cqh * 3944 / 2564));
+  height: min(88cqh, calc(64cqw * 2564 / 3944));
+  z-index: 3;
+  filter: drop-shadow(0 28px 48px rgba(8, 4, 0, 0.5));
+}
+
+.mcs-asset--phone {
+  height: min(90cqh, 100%);
+  width: auto;
+  aspect-ratio: 1406 / 2822;
+  max-width: 40cqw;
+  filter: drop-shadow(0 22px 36px rgba(0, 0, 0, 0.55));
+}
+
+/* legacy dual pair (unused) */
+.mcs-phone-asset--back {
+  z-index: 1;
+  max-width: 34cqw;
+  height: min(78cqh, 100%);
+  transform: translate3d(-14%, 6%, 0) rotate(-10deg);
+  opacity: 0.94;
+  filter:
+    drop-shadow(0 18px 28px rgba(0, 0, 0, 0.5))
+    brightness(0.9);
+}
+
+.mcs-phone-asset--front {
+  z-index: 2;
+  max-width: 40cqw;
+  height: min(90cqh, 100%);
+  margin-left: -8cqw;
+  transform: translate3d(6%, 0, 0) rotate(3.5deg);
+  filter: drop-shadow(0 28px 44px rgba(0, 0, 0, 0.62));
+}
+
+.mcs-asset-frame {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+.mcs-asset--macbook .mcs-asset-frame,
+.mcs-asset--phone .mcs-asset-frame {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+}
+
+.mcs-asset-slot {
+  position: absolute;
+  z-index: 1;
+  overflow: hidden;
+  background: #111;
+}
+
+/* Pro glass curve — keep in CSS (slash radii are unreliable as inline styles) */
+.mcs-asset--pro .mcs-asset-slot {
+  border-radius: 1.2% / 1.85%;
+}
+
+.mcs-asset-slot .mcs-shot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+/* Light overscan so square bitmap fills rounded glass */
+.mcs-shot--hero {
+  transform: scale(1.06);
+  transform-origin: center center;
+}
+
+.mcs-screen--live {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  aspect-ratio: auto;
+  border-radius: inherit;
+  background: #050505;
+  /* Slight overscan so poster/canvas never leave a 1px gap at the bezel */
+  transform: scale(1.012);
+  transform-origin: center center;
+}
+
+.mcs-screen--live .mcs-poster,
+.mcs-screen--live .mcs-canvas {
+  object-fit: cover;
+  object-position: center top;
+}
+
+.mcs-shot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Keep status bar / safe area under Dynamic Island, never crop UI into the notch */
+  object-position: center top;
+}
+
+.mcs-device--desktop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4% 5%;
 }
 
 .mcs-device--phone {
   padding: 0;
 }
 
-.mcs-mac {
+/* Clean browser window — honest screenshot frame, no fake hardware */
+.mcs-browser {
   display: flex;
-  width: min(90%, 920px);
+  width: min(100cqw, calc(100cqh * 16 / 10.4));
+  height: min(100cqh, calc(100cqw * 10.4 / 16));
+  max-width: 100%;
+  max-height: 100%;
   flex-direction: column;
-  align-items: stretch;
-  filter: drop-shadow(0 22px 40px rgba(0, 0, 0, 0.55));
-}
-
-.mcs-mac-lid {
-  position: relative;
-  z-index: 1;
-  border-radius: 12px 12px 4px 4px;
-  padding: 4px;
-  background:
-    linear-gradient(180deg, #7a7a82 0%, #3e3e44 14%, #2a2a30 55%, #1c1c20 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 0 1px rgba(0, 0, 0, 0.55);
-}
-
-.mcs-mac-bezel {
-  position: relative;
   overflow: hidden;
-  border-radius: 8px;
-  padding: 10px 10px 12px;
-  background: #0a0a0c;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.045);
+  border-radius: 10px;
+  background: #101013;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.09),
+    0 30px 70px -28px rgba(0, 0, 0, 0.85);
 }
 
-.mcs-mac-notch {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  z-index: 6;
+.mcs-browser-bar {
+  position: relative;
+  z-index: 2;
   display: flex;
-  width: 14%;
-  height: 14px;
-  align-items: center;
-  justify-content: center;
-  transform: translateX(-50%);
-  border-radius: 0 0 8px 8px;
-  background: #0a0a0c;
-}
-
-.mcs-mac-cam {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 30%, #4a5a68 0%, #15181c 55%, #050506 100%);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
-.mcs-mac-deck {
-  position: relative;
-  z-index: 0;
-  margin-top: -1px;
-  padding: 8px 8% 12px;
-  border-radius: 0 0 16px 16px;
-  background:
-    linear-gradient(180deg, #4a4a50 0%, #2e2e34 22%, #1e1e22 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 10px 22px rgba(0, 0, 0, 0.4);
-  transform: perspective(900px) rotateX(16deg);
-  transform-origin: top center;
-}
-
-.mcs-mac-keys {
-  display: grid;
-  grid-template-columns: repeat(14, minmax(0, 1fr));
-  gap: 2.5px;
-}
-
-.mcs-mac-keys span {
-  height: 7px;
-  border-radius: 1.5px;
-  background: linear-gradient(180deg, #2a2a30, #101014);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 1px 0 rgba(0, 0, 0, 0.5);
-}
-
-.mcs-mac-keys span:nth-child(n + 43):nth-child(-n + 48) {
-  height: 8px;
-}
-
-.mcs-mac-keys span:nth-child(45),
-.mcs-mac-keys span:nth-child(46) {
-  background: linear-gradient(180deg, #222228, #0c0c10);
-}
-
-.mcs-mac-pad {
-  width: 30%;
-  height: 16px;
-  margin: 8px auto 0;
-  border-radius: 6px;
-  background: #16161a;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
-.mcs-device--mac .mcs-screen {
-  position: relative;
-  top: auto;
-  left: auto;
-  z-index: 1;
+  height: 38px;
   flex: none;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: linear-gradient(180deg, #1e1e22 0%, #141417 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mcs-browser-dots {
+  display: flex;
+  gap: 7px;
+  flex: 1 0 0;
+}
+
+.mcs-browser-dots i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.25);
+}
+
+.mcs-browser-dots i:nth-child(1) {
+  background: #ff5f57;
+}
+
+.mcs-browser-dots i:nth-child(2) {
+  background: #febc2e;
+}
+
+.mcs-browser-dots i:nth-child(3) {
+  background: #28c840;
+}
+
+.mcs-browser-url {
+  flex: none;
+  padding: 4px 16px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.mcs-browser-ghost {
+  flex: 1 0 0;
+}
+
+.mcs-browser .mcs-screen {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
   width: 100%;
+  min-height: 0;
   height: auto;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: auto;
   overflow: hidden;
-  border-radius: 4px;
   background: #050505;
 }
 
@@ -613,48 +1197,212 @@ html.lenis body {
 
 @media (max-width: 767px) {
   .mcs-slide {
-    width: min(88vw, 1100px);
-    height: 100%;
+    width: 100%;
+    height: auto;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
+    padding: 0.5rem 0 1rem;
   }
 
   .mcs-head {
     flex-shrink: 0;
-    text-align: center;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 3px;
+    text-align: left;
+    margin-bottom: 0.85rem;
   }
 
   .mcs-head-tag {
-    display: none;
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--color-accent, #ff4d00) !important;
+    font-weight: 700;
   }
 
   .mcs-head-title {
-    margin: 0;
-    font-size: clamp(1.2rem, 6vw, 1.65rem);
-    line-height: 1.1;
+    margin: 1px 0 0;
+    font-size: clamp(1.45rem, 6.5vw, 1.85rem);
+    line-height: 1.05;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--color-fg);
+  }
+
+  /* Mobile: Hide separate button since preview is clickable */
+  .mcs-head-cta {
+    display: none !important;
   }
 
   .mcs-stage,
   .case-stage {
-    flex: 1 1 auto;
-    aspect-ratio: auto;
+    position: relative;
     width: 100%;
-    min-height: 0;
-    max-height: none;
-    margin-top: 0.55rem;
+    height: auto;
+    aspect-ratio: 16 / 10.4;
+    min-height: 220px;
+    max-height: 52vh;
+    margin-top: 0.25rem;
+    border-radius: 14px;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.55);
+    container-type: size;
+    overflow: hidden;
   }
 
-  .mcs-device--mac {
-    padding: 6% 5% 4%;
+  .mcs-device--macbook {
+    position: absolute;
+    inset: 0;
+    padding: 2% 2% 4%;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .mcs-mac {
-    width: 92%;
-    filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.45));
+  .mcs-asset--macbook {
+    width: min(92cqw, 100%);
+    height: auto;
+    aspect-ratio: 3260 / 2164;
   }
 
-  .mcs-mac-deck {
-    transform: perspective(720px) rotateX(18deg);
+  /* ── RETRO ZAZ Mobile: Exact Proportional Scale-Down of PC Layout ── */
+  .mcs-stage--zaz {
+    aspect-ratio: 16 / 9.5 !important;
+    container-type: size;
+  }
+
+  .mcs-device--zaz {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2% 1% 4.5%;
+  }
+
+  .zaz-mac {
+    position: relative;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: min(72cqw, 100%) !important;
+  }
+
+  .mcs-stage--zaz .mcs-asset--pro,
+  .zaz-mac > .mcs-asset--pro {
+    position: relative;
+    z-index: 1;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    aspect-ratio: 3944 / 2564 !important;
+    filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.55));
+  }
+
+  /* Floating cards scaled down proportionally, placed beside laptop */
+  .zaz-float {
+    display: block !important;
+    position: absolute;
+    z-index: 2;
+    top: 48%;
+    width: 20.5cqw !important;
+    max-width: none !important;
+    aspect-ratio: 488 / 834;
+    overflow: hidden;
+    border-radius: 6px;
+    background: #efe4cc;
+    box-shadow: 0 8px 20px rgba(8, 5, 2, 0.45), 0 0 0 1px rgba(239, 228, 204, 0.14);
+  }
+
+  .zaz-float--left {
+    left: 4.5% !important;
+    transform: translate3d(6%, -48%, 0) rotate(-5.5deg) !important;
+  }
+
+  .zaz-float--right {
+    right: 4.5% !important;
+    transform: translate3d(-6%, -44%, 0) rotate(5.5deg) !important;
+  }
+
+  .mcs-device--dual {
+    gap: 0;
+    padding: 3% 0 5%;
+  }
+
+  .mcs-device--trio {
+    padding: 1.5% 0.5% 2.5%;
+  }
+
+  .mcs-device--trio .mcs-trio--side.mcs-asset--phone {
+    width: min(31cqw, calc(78cqh * 1406 / 2822));
+    max-height: 78cqh;
+  }
+
+  .mcs-device--trio .mcs-trio--left.mcs-asset--phone {
+    margin-right: -2cqw;
+    transform: rotate(-1.75deg);
+  }
+
+  .mcs-device--trio .mcs-trio--right.mcs-asset--phone {
+    margin-left: -2cqw;
+    transform: rotate(1.75deg);
+  }
+
+  .mcs-device--trio .mcs-trio--hero.mcs-asset--phone {
+    width: min(34.5cqw, calc(86cqh * 1406 / 2822));
+    max-height: 86cqh;
+    transform: none;
+  }
+
+  .mcs-asset--phone {
+    max-width: 46cqw;
+    height: min(86cqh, 100%);
+  }
+
+  .mcs-phone-asset--back {
+    max-width: 38cqw;
+    height: min(72cqh, 100%);
+    transform: translate3d(-10%, 5%, 0) rotate(-8deg);
+  }
+
+  .mcs-phone-asset--front {
+    max-width: 46cqw;
+    height: min(86cqh, 100%);
+    margin-left: -10cqw;
+    transform: translate3d(4%, 0, 0) rotate(2.5deg);
+  }
+
+  .mcs-device--desktop {
+    padding: 3% 2%;
+  }
+
+  .mcs-browser {
+    width: min(100cqw, calc(100cqh * 16 / 10));
+    height: min(100cqh, calc(100cqw * 10 / 16));
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 8px;
+  }
+
+  .mcs-browser-bar {
+    height: 30px;
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .mcs-browser-dots i {
+    width: 8px;
+    height: 8px;
+  }
+
+  .mcs-browser-url {
+    padding: 3px 12px;
+    font-size: 9px;
   }
 
   .mcs-device--phone {
@@ -662,7 +1410,7 @@ html.lenis body {
   }
 
   .mcs-phone {
-    height: 100%;
+    height: min(94cqh, 100%);
     width: auto;
     max-width: 100%;
     aspect-ratio: 9 / 19.5;
@@ -695,15 +1443,12 @@ html.lenis body {
     padding: 5px 9px;
     font-size: 9px;
   }
-
-  .zaz-iframe {
-    pointer-events: none;
-  }
 }
 
 @media (min-width: 768px) {
-  .mcs-stage {
-    margin-top: 1.5rem;
+  .mcs-stage,
+  .case-stage {
+    margin-top: 0.75rem;
   }
 }
 
@@ -711,4 +1456,31 @@ html.lenis body {
   .mcs-track {
     height: auto;
   }
+
+  .mcs-head-cta {
+    transition: none;
+    filter: none;
+  }
 }
+
+/* ── AI Chat Widget & General Scrollbar Suppression ───────── */
+.no-scrollbar,
+.chat-scroll-container,
+.chips-scroll-container {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+.no-scrollbar::-webkit-scrollbar,
+.chat-scroll-container::-webkit-scrollbar,
+.chips-scroll-container::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.chips-fade-mask {
+  mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+}
+

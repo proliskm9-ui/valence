@@ -13,7 +13,7 @@ export default function LanguageSwitcher() {
   const { lang, setLang } = useLanguage();
 
   return (
-    <div className="flex items-center rounded-full border border-line bg-bg2/80 p-1 backdrop-blur-md">
+    <div className="flex items-center rounded-full border border-line/60 bg-bg2/80 p-0.5 backdrop-blur-md md:p-1">
       {LANGUAGES.map((l) => {
         const isActive = lang === l.id;
         return (
@@ -22,8 +22,8 @@ export default function LanguageSwitcher() {
             type="button"
             data-cursor="hover"
             onClick={() => setLang(l.id)}
-            className={`rounded-full px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-wider transition-colors duration-300 md:px-3 md:text-[11px] ${
-              isActive ? 'bg-accent text-bg' : 'text-muted hover:text-fg'
+            className={`rounded-full px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider transition-colors duration-200 md:px-2.5 md:py-1 md:text-[11px] ${
+              isActive ? 'bg-accent font-bold text-bg' : 'text-muted hover:text-text'
             }`}
           >
             {l.label}

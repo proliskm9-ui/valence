@@ -1,23 +1,33 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { m } from 'framer-motion';
-import { useRevealPhase } from '@/components/providers/LoadProvider';
+import Link from 'next/link';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
-import { SITE, EASE_OUT_EXPO } from '@/lib/site';
+import { SITE, getWhatsAppUrl } from '@/lib/site';
 
 export default function Header() {
-  const phase = useRevealPhase();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  const whatsappUrl = getWhatsAppUrl(lang);
 
   const NAV = [
-    { href: '#services', label: t.nav.services },
-    { href: '#work', label: t.nav.work },
-    { href: '#process', label: t.nav.process },
-    { href: '#contact', label: t.nav.contact },
+    { href: '/services', label: t.nav.services },
+    { href: '/cases', label: t.nav.work },
+    { href: '/process', label: t.nav.process },
+    { href: '/about', label: t.nav.about },
+    { href: '/contact', label: t.nav.contact },
   ];
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
@@ -27,77 +37,109 @@ export default function Header() {
   }, [open]);
 
   return (
-    <m.header
-      initial={false}
-      animate={phase}
-      variants={{
-        hidden: { y: -20, opacity: 0, transition: { duration: 0 } },
-        visible: {
-          y: 0,
-          opacity: 1,
-          transition: { duration: 0.8, ease: EASE_OUT_EXPO, delay: 0.9 },
-        },
-      }}
-      className={`fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between px-5 md:h-20 md:px-10 ${
-        open ? 'bg-bg' : 'bg-gradient-to-b from-bg via-bg/70 to-transparent'
-      }`}
-    >
-      <a
-        href="#top"
-        data-cursor="hover"
-        className="relative z-50 font-display text-lg font-bold tracking-tight"
-        onClick={() => setOpen(false)}
+    <>
+      {/* ── 1. DESKTOP HEADER (Fixed top, full width, original classic layout) ── */}
+      <header
+        className={`fixed inset-x-0 top-0 z-50 hidden h-20 items-center justify-between px-10 transition-all duration-300 md:flex ${
+          scrolled
+            ? 'border-b border-line/40 bg-bg/85 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl'
+            : 'border-b border-transparent bg-gradient-to-b from-bg/90 via-bg/40 to-transparent backdrop-blur-sm'
+        }`}
       >
-        {SITE.name}
-        <span className="text-accent">·</span>
-      </a>
-
-      <div className="relative z-50 flex items-center gap-3 md:gap-6">
-        <nav aria-label="Основная навигация" className="hidden items-center gap-8 md:flex">
-          {NAV.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              data-cursor="hover"
-              className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted transition-colors hover:text-fg"
-            >
-              {item.label}
-            </a>
-          ))}
-        </nav>
-
-        <LanguageSwitcher />
-
-        <button
-          type="button"
-          className="relative z-50 flex h-10 w-10 flex-col items-center justify-center gap-1.5 border border-line md:hidden"
-          aria-label={open ? t.nav.close : t.nav.menu}
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
+        {/* Brand Logo */}
+        <Link
+          href="/"
+          data-cursor="hover"
+          className="font-display text-lg font-bold tracking-tight text-fg transition-opacity hover:opacity-90"
         >
-          <span className={`h-px w-4 bg-fg transition-transform ${open ? 'translate-y-[4px] rotate-45' : ''}`} />
-          <span className={`h-px w-4 bg-fg transition-opacity ${open ? 'opacity-0' : ''}`} />
-          <span className={`h-px w-4 bg-fg transition-transform ${open ? '-translate-y-[4px] -rotate-45' : ''}`} />
-        </button>
-      </div>
+          {SITE.name}
+          <span className="text-accent font-black">·</span>
+        </Link>
 
+        {/* Right-aligned Navigation Group + Language Switcher */}
+        <div className="flex items-center gap-6 lg:gap-8">
+          <nav aria-label="Основная навигация" className="flex items-center gap-6 lg:gap-8">
+            {NAV.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                data-cursor="hover"
+                className="font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-muted transition-colors hover:text-fg"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          <LanguageSwitcher />
+        </div>
+      </header>
+
+      {/* ── 2. MOBILE FLOATING PILL HEADER (Strictly contained, 100% visible) ── */}
+      <header className="fixed top-3.5 left-3 right-3 z-50 flex h-12 max-w-[calc(100vw-1.5rem)] mx-auto items-center justify-between rounded-full border border-line/60 bg-[#0c0c10]/95 px-4 shadow-[0_8px_25px_rgba(0,0,0,0.75)] backdrop-blur-2xl md:hidden box-border">
+        {/* Logo */}
+        <Link
+          href="/"
+          className="shrink-0 font-display text-sm font-bold tracking-tight text-fg"
+          onClick={() => setOpen(false)}
+        >
+          {SITE.name}
+          <span className="text-accent font-black">·</span>
+        </Link>
+
+        {/* Right Controls: Language Switcher + Premium Burger */}
+        <div className="flex shrink-0 items-center gap-2">
+          <LanguageSwitcher />
+
+          <button
+            type="button"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-fg transition-all active:scale-90"
+            aria-label={open ? t.nav.close : t.nav.menu}
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? (
+              <svg className="h-4 w-4 stroke-current" viewBox="0 0 24 24" fill="none" strokeWidth="2.2" strokeLinecap="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="h-4 w-4 stroke-current" viewBox="0 0 24 24" fill="none" strokeWidth="2.2" strokeLinecap="round">
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            )}
+          </button>
+        </div>
+      </header>
+
+      {/* ── 3. FULLSCREEN MOBILE MENU (Burger Drawer) ── */}
       {open ? (
         <nav
           aria-label={t.nav.work}
-          className="fixed inset-0 z-40 flex flex-col justify-center gap-7 bg-bg px-6 pt-16 md:hidden"
+          className="fixed inset-0 z-40 flex flex-col justify-center gap-6 bg-bg/95 px-8 pt-16 backdrop-blur-3xl md:hidden"
         >
           {NAV.map((item) => (
-            <a
+            <Link
               key={item.href}
               href={item.href}
-              className="font-display text-4xl font-extrabold tracking-tight"
+              className="font-display text-3xl font-extrabold tracking-tight text-fg"
               onClick={() => setOpen(false)}
             >
               {item.label}
-            </a>
+            </Link>
           ))}
+
+          <div className="mt-8 border-t border-line/20 pt-6">
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366]/20 py-3.5 font-mono text-xs font-bold text-[#25D366]"
+            >
+              WhatsApp ({lang === 'ka' ? '+995 598 90 28 76' : '+7 995 317 35 44'})
+            </a>
+          </div>
         </nav>
       ) : null}
-    </m.header>
+    </>
   );
 }
